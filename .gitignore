@@ -14,7 +14,9 @@ cache/
 # Environment / secrets
 .env
 *.env
+# Allow example/template env files to be committed (they contain no secrets)
 !sample.env
+!.env.example
 
 # Logs
 log.txt

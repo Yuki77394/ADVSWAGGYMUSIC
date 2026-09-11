@@ -26,6 +26,17 @@ You can add these later in **Heroku → Settings → Config Vars**:
 
 `SESSION2`, `SESSION3`, `DURATION_LIMIT`, `QUEUE_LIMIT`, `PLAYLIST_LIMIT`, `SUPPORT_CHANNEL`, `SUPPORT_CHAT`, `SHRUTI_API_URL`, `SHRUTI_API_KEY`, `AUTO_LEAVE`, `AUTO_END`, `THUMB_GEN`, `VIDEO_PLAY`, `LANG_CODE`, `COOKIES_URL`, `DEFAULT_THUMB`, `PING_IMG`, `START_VIDEO`.
 
+> **Note on `SHRUTI_API_KEY`:** This must be provided through the environment (Heroku Config Var). There is **no hardcoded fallback** in the repository — if it is not set, the ShrutiBots fallback downloader will simply be unavailable, but the bot will still run normally using the primary YouTube extractor.
+
+## Local development
+
+1. Copy `.env.example` to `.env` and fill in your credentials.
+2. Install dependencies: `pip install -r requirements.txt`
+3. Make sure `ffmpeg` and `deno` are installed and available on your `PATH`.
+4. Start the bot: `python3 -m SWAGGYMUSIC`
+
+> `.env` is gitignored — never commit a real `.env` file. Use `.env.example` as the template.
+
 ## Manual Heroku deployment
 
 1. Fork this repository.

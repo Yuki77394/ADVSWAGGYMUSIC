@@ -10,9 +10,12 @@ from py_yt import VideosSearch, Playlist
 from SWAGGYMUSIC import logger, config
 from SWAGGYMUSIC.helpers import Track, utils
 
-API_URL = os.environ.get("SHRUTI_API_URL", "https://api.shrutibots.site")
+API_URL = os.environ.get("SHRUTI_API_URL") or getattr(config, "API_URL", "https://api.shrutibots.site")
 
-API_KEY = os.environ.get("SHRUTI_API_KEY", "ShrutiBotsfhGT4c09sFRRuQIB6yCG") ## Get This API KEY FROM TELEGRAM BOT USERNAME: @SHRUTIAPIBOT
+# SHRUTI_API_KEY is a private credential — read it from the environment
+# (or from the central config object, which itself reads the env). Never
+# hardcode a default value here.
+API_KEY = os.environ.get("SHRUTI_API_KEY") or getattr(config, "API_KEY", "")
 
 DOWNLOAD_DIR = "downloads"
 
