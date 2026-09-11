@@ -80,6 +80,15 @@ async def _send_start_photo_with_effect(
             elif style == ButtonStyle.DANGER:
                 item["style"] = "danger"
 
+            # Preserve Premium Custom Emoji IDs when converting from
+            # Pyrogram/Kurigram InlineKeyboardButton to the Bot API
+            # inline_keyboard format. Without this, the start-page buttons
+            # (Add Me, Support, Channel, Help, Owner) would lose their
+            # custom emoji icons when sent through the Bot API.
+            icon_custom_emoji_id = getattr(button, "icon_custom_emoji_id", None)
+            if icon_custom_emoji_id:
+                item["icon_custom_emoji_id"] = str(icon_custom_emoji_id)
+
             row_buttons.append(item)
         if row_buttons:
             keyboard.append(row_buttons)
