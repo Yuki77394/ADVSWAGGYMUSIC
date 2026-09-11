@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+!SWAGGYMUSIC/helpers/*.ttf
+cache/
+
+# Environment / secrets
+.env
+*.env
+!sample.env
+
+# Logs
+log.txt
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Venv
+venv/
+env/
+.venv/
