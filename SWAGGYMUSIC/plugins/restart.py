@@ -59,7 +59,7 @@ async def _restart(_, m: types.Message):
 # --- NAYA UPDATE COMMAND YAHAN HAI ---
 @app.on_message(filters.command(["update"]) & app.sudoers)
 async def _update(_, m: types.Message):
-    sent = await m.reply_text("🔄 **Checking for updates from GitHub...**")
+    sent = await m.reply_text("🔄 <b>Checking for updates from GitHub...</b>")
 
     try:
         # Git pull command run karne ke liye subprocess ka use
@@ -74,14 +74,14 @@ async def _update(_, m: types.Message):
 
         # Agar bot pehle se updated hai
         if "Already up to date." in output:
-            return await sent.edit_text("✅ **Bot is already up to date with GitHub.**")
+            return await sent.edit_text("✅ <b>Bot is already up to date with GitHub.</b>")
 
         # Agar git pull me koi error aati hai
         if process.returncode != 0:
-            return await sent.edit_text(f"❌ **Update failed:**\n\n`{error}`")
+            return await sent.edit_text(f"❌ <b>Update failed:</b>\n\n<code>{error}</code>")
 
         # Update successful hone par restart logic
-        await sent.edit_text(f"✅ **Successfully pulled updates!**\n\n`{output}`\n\n🔄 **Restarting bot now baby...**")
+        await sent.edit_text(f"✅ <b>Successfully pulled updates!</b>\n\n<code>{output}</code>\n\n🔄 <b>Restarting bot now baby...</b>")
 
         # Cache aur downloads folder clean karna (jaisa restart me hai)
         for directory in ["cache", "downloads"]:
@@ -99,4 +99,4 @@ async def _update(_, m: types.Message):
         os.execl(sys.executable, sys.executable, "-m", "SWAGGYMUSIC")
 
     except Exception as e:
-        await sent.edit_text(f"❌ **Error during update:**\n`{e}`")
+        await sent.edit_text(f"❌ <b>Error during update:</b>\n<code>{e}</code>")
