@@ -42,7 +42,6 @@ class Inline:
                         text=status,
                         callback_data=f"controls status {chat_id}",
                         style=ButtonStyle.PRIMARY,
-                        icon_custom_emoji_id="5767288287001580715",  # 💡
                     )
                 ]
             )
@@ -53,7 +52,6 @@ class Inline:
                         text=timer,
                         callback_data=f"controls status {chat_id}",
                         style=ButtonStyle.PRIMARY,
-                        icon_custom_emoji_id="5267421370114914946",  # ⏱
                     )
                 ]
             )
@@ -63,22 +61,17 @@ class Inline:
                 _on = "ᴏɴ ☜"
                 _off = "ᴏғғ ☜"
 
-                # Check ON/OFF state for thumb
-                thumb_emoji = "6280269890821558384" if thumb else "6271611232457855630" # ✅ or ❌
-
                 keyboard.append(
                     [
                         self.ikb(
                             text="Thumbnail",
                             callback_data="help thumb",
                             style=ButtonStyle.SUCCESS,
-                            icon_custom_emoji_id="5409143496902716934",  # 🖼
                         ),
                         self.ikb(
                             text=_on if thumb else _off,
                             callback_data=f"controls cthumb {chat_id}",
                             style=ButtonStyle.SUCCESS,
-                            icon_custom_emoji_id=thumb_emoji,
                         ),
                     ]
                 )
@@ -88,37 +81,35 @@ class Inline:
                             text="ʙᴀᴄᴋ ⎋",
                             callback_data=f"controls back {chat_id}",
                             style=ButtonStyle.DANGER,
-                            icon_custom_emoji_id="5352759161945867747",  # 🔙
                         )
                     ]
                 )
             else:
+                # Premium Custom Emoji icons are intentionally NOT included on
+                # the playback CONTROL buttons — they make the buttons visually
+                # oversized.  The streaming CAPTION above these buttons (which
+                # uses inline <emoji id="..."> tags) still keeps its emojis.
                 keyboard.append(
                     [
                         self.ikb(
                             text="▷",
                             callback_data=f"controls resume {chat_id}",
-                            icon_custom_emoji_id="5850346984501680054"  # ▶️
                         ),
                         self.ikb(
                             text="II",
                             callback_data=f"controls pause {chat_id}",
-                            icon_custom_emoji_id="6100514338274020922"  # ⏸️
                         ),
                         self.ikb(
                             text="⥁",
                             callback_data=f"controls replay {chat_id}",
-                            icon_custom_emoji_id="6030657343744644592"  # 🔁
                         ),
                         self.ikb(
                             text="‣‣I",
                             callback_data=f"controls skip {chat_id}",
-                            icon_custom_emoji_id="6172332822892647766"  # 🚀
                         ),
                         self.ikb(
                             text="▢",
                             callback_data=f"controls stop {chat_id}",
-                            icon_custom_emoji_id="6271674836628541366"  # 🛑
                         ),
                     ]
                 )
@@ -128,23 +119,6 @@ class Inline:
     def help_markup(
         self, _lang: dict, back: bool = False
     ) -> types.InlineKeyboardMarkup:
-
-        # Premium Custom Emoji IDs for the help-menu buttons (sourced from the
-        # SWAGGYMUSIC reference _inline.py — do NOT replace with Unicode emojis).
-        emoji_map = {
-            "admins": "6271824284310573725",   # 👮‍♂️
-            "auth": "5884366771913233289",     # 👤
-            "blist": "6100397162976252509",    # 🚫
-            "lang": "6269490656779965144",     # 🌐
-            "ping": "6246741653827095091",     # 🏓
-            "play": "5850346984501680054",     # ▶️
-            "queue": "5222281328258465590",    # 📜
-            "stats": "5936143551854285132",    # 📊
-            "sudo": "6237864166879663987",     # 👑
-            "thumb": "5409143496902716934",    # 🖼
-            "vclog": "5258077307985207053",    # 📹
-            "autoplay": "6030657343744644592", # 🔁
-        }
 
         if back:
             rows = [
@@ -163,6 +137,11 @@ class Inline:
             # Order matters: this matches the help_0 .. help_11 language keys
             # (admins, auth, blacklist, language, ping, play, queue, stats,
             #  sudoers, thumbnail, vc logger, autoplay).
+            #
+            # Premium Custom Emoji icons are intentionally NOT included on the
+            # help GRID buttons — they make the buttons visually oversized.
+            # The grid buttons are text-only for a compact layout.
+            # The Back button below KEEPS its Premium Custom Emoji.
             cbs = [
                 "admins", "auth", "blist", "lang", "ping", "play",
                 "queue", "stats", "sudo", "thumb", "vclog", "autoplay",
@@ -173,7 +152,6 @@ class Inline:
                     text=_lang[f"help_{i}"],
                     callback_data=f"help {cb}",
                     style=ButtonStyle.SUCCESS,
-                    icon_custom_emoji_id=emoji_map[cb],
                 )
                 for i, cb in enumerate(cbs)
             ]
@@ -184,7 +162,7 @@ class Inline:
                         text=_lang["back"],
                         callback_data="help home",
                         style=ButtonStyle.DANGER,
-                        icon_custom_emoji_id="5352759161945867747",  # 🔙
+                        icon_custom_emoji_id="5352759161945867747",  # 🔙 — KEPT
                     ),
                 ]
             )

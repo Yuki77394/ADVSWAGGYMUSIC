@@ -4,6 +4,7 @@ from pyrogram import enums, errors, filters, types
 
 from SWAGGYMUSIC import SWAGGYMUSIC, app, db, lang, queue, tg, yt
 from SWAGGYMUSIC.helpers import admin_check, buttons
+from SWAGGYMUSIC.plugins.start import build_start_caption
 
 
 @app.on_callback_query(filters.regex("cancel_dl") & ~app.bl_users)
@@ -187,12 +188,14 @@ async def _help(_, query: types.CallbackQuery):
         return await _render(f'<emoji id="5260512129240276089">📚</emoji> {query.lang["help_menu"]}', buttons.help_markup(query.lang))
     elif data[1] == "home":
         private = query.message.chat.type == enums.ChatType.PRIVATE
-        _text = (
-            query.lang["start_pm"].format(query.from_user.first_name, app.name)
-            if private
-            else query.lang["start_gp"].format(app.name)
-        )
-        return await _render(f'<emoji id="6172312314423808834">✨</emoji> {_text}', buttons.start_key(query.lang, private))
+        # Use the SAME shared caption builder as fresh /start so the
+        # returned Start caption is identical (dynamic bot name, same
+        # HTML mention formatting, same template).
+        if private:
+            _text = build_start_caption(query.from_user, query.lang["start_pm"])
+        else:
+            _text = query.lang["start_gp"].format(app.name)
+        return await _render(_text, buttons.start_key(query.lang, private))
     elif data[1] == "close":
         try:
             await query.message.delete()
@@ -257,4 +260,54 @@ async def _settings_cb(_, query: types.CallbackQuery):
             chat_id,
         )
             )
+
+
+# ─── Thumbnail settings callback ──────────────────────────────────────
+# Adapted from the reference KURIGRAMSWAG repository's THUMBNAILCHANGE
+# callback handler.  Toggles the thumbnail mode for the chat and
+# re-renders the Thumbnail settings panel with the updated state.
+@app.on_callback_query(
+    filters.regex(r"^THUMBNAILCHANGE$") & ~app.bl_users
+)
+@lang.language()
+@admin_check
+async def _thumbnail_change(_, query: types.CallbackQuery):
+    chat_id = query.message.chat.id
+
+    # Toggle thumbnail mode in the database.
+    thumb_state = not await db.get_thumb_mode(chat_id)
+    await db.set_thumb_mode(chat_id, thumb_state)
+
+    try:
+        await query.answer(f"⚡ {query.lang['processing']}", show_alert=False)
+    except Exception:
+        pass
+
+    # Re-render the Thumbnail settings panel with the new state.
+    from SWAGGYMUSIC.plugins.thumb import _thumb_markup
+
+    try:
+        await query.edit_message_reply_markup(
+            reply_markup=_thumb_markup(thumb_state)
+        )
+    except Exception:
+        return
+
+
+# ─── Close callback for standalone panels ─────────────────────────────
+# Handles callback_data == "close" (exactly), used by the Thumbnail
+# settings panel's CLOSE button.  This is a standalone handler separate
+# from "help close" and "controls close" which are prefixed and handled
+# by their respective regex handlers above.
+@app.on_callback_query(filters.regex(r"^close$") & ~app.bl_users)
+@lang.language()
+async def _close_panel(_, query: types.CallbackQuery):
+    try:
+        await query.answer()
+    except Exception:
+        pass
+    try:
+        await query.message.delete()
+    except Exception:
+        return
                 

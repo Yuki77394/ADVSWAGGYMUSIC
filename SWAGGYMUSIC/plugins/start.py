@@ -20,14 +20,21 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 CELEBRATION_EFFECT_ID = 5046509860389126442
 
 
-def _build_start_caption(message: types.Message, template: str) -> str:
+def build_start_caption(user, template: str) -> str:
     """Build a Bot-API-safe HTML caption from the language template.
 
+    This is the SINGLE shared caption-builder used by BOTH the fresh ``/start``
+    command and the ``Help → Back`` callback (``help home``).  Using the same
+    function for both paths guarantees the Start caption is identical after
+    Help → Back as it is on a fresh /start.
+
     The template uses ``{0}`` for the user mention and ``{1}`` for the bot
-    mention. Both display names are HTML-escaped and wrapped in safe anchor
+    mention.  Both display names are HTML-escaped and wrapped in safe anchor
     tags so user-controlled names cannot break the caption markup.
+
+    The bot name is ALWAYS resolved dynamically from ``app.name`` (the actual
+    current bot display name set in Telegram).  It is NEVER hardcoded.
     """
-    user = message.from_user
     user_name = (
         " ".join(part for part in (user.first_name, user.last_name) if part).strip()
         or "User"
@@ -35,6 +42,8 @@ def _build_start_caption(message: types.Message, template: str) -> str:
     safe_user_name = html.escape(user_name, quote=False)
     user_mention = f'<a href="tg://user?id={int(user.id)}">{safe_user_name}</a>'
 
+    # Dynamic bot name — resolved from the live Pyrogram/Kurigram client.
+    # This is the ACTUAL current bot display name, not a static literal.
     bot_username = getattr(app, "username", None)
     bot_name = getattr(app, "name", None) or bot_username or "SWAGGYMUSIC"
     safe_bot_name = html.escape(str(bot_name).strip(), quote=False)
@@ -163,7 +172,7 @@ async def start(_, message: types.Message):
             pass
 
     if private:
-        _text = _build_start_caption(message, message.lang["start_pm"])
+        _text = build_start_caption(message.from_user, message.lang["start_pm"])
     else:
         _text = message.lang["start_gp"].format(app.name)
 
