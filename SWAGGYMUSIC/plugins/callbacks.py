@@ -3,7 +3,7 @@ import re
 from pyrogram import enums, errors, filters, types
 
 from SWAGGYMUSIC import SWAGGYMUSIC, app, db, lang, queue, tg, yt
-from SWAGGYMUSIC.helpers import admin_check, buttons
+from SWAGGYMUSIC.helpers import admin_check, buttons, can_manage_vc
 from SWAGGYMUSIC.plugins.start import build_start_caption
 
 
@@ -296,9 +296,10 @@ async def _thumbnail_change(_, query: types.CallbackQuery):
 
 # ─── Close callback for standalone panels ─────────────────────────────
 # Handles callback_data == "close" (exactly), used by the Thumbnail
-# settings panel's CLOSE button.  This is a standalone handler separate
-# from "help close" and "controls close" which are prefixed and handled
-# by their respective regex handlers above.
+# settings panel's CLOSE button and the Autoplay panel's CLOSE button.
+# This is a standalone handler separate from "help close" and
+# "controls close" which are prefixed and handled by their respective
+# regex handlers above.
 @app.on_callback_query(filters.regex(r"^close$") & ~app.bl_users)
 @lang.language()
 async def _close_panel(_, query: types.CallbackQuery):
@@ -308,6 +309,39 @@ async def _close_panel(_, query: types.CallbackQuery):
         pass
     try:
         await query.message.delete()
+    except Exception:
+        return
+
+
+# ─── Autoplay settings callback ───────────────────────────────────────
+# Adapted from the reference KURIGRAMSWAG repository's AUTOPLAYCHANGE
+# callback handler.  Toggles the autoplay state for the chat (using the
+# TARGET's existing db.set_autoplay / db.get_autoplay logic) and
+# re-renders the Autoplay settings panel with the updated state.
+@app.on_callback_query(
+    filters.regex(r"^AUTOPLAYCHANGE$") & ~app.bl_users
+)
+@lang.language()
+@can_manage_vc
+async def _autoplay_change(_, query: types.CallbackQuery):
+    chat_id = query.message.chat.id
+
+    # Toggle autoplay state in the database (TARGET's existing logic).
+    autoplay_state = not await db.get_autoplay(chat_id)
+    await db.set_autoplay(chat_id, autoplay_state)
+
+    try:
+        await query.answer(f"⚡ {query.lang['processing']}", show_alert=False)
+    except Exception:
+        pass
+
+    # Re-render the Autoplay settings panel with the new state.
+    from SWAGGYMUSIC.plugins.autoplay import _autoplay_markup
+
+    try:
+        await query.edit_message_reply_markup(
+            reply_markup=_autoplay_markup(autoplay_state)
+        )
     except Exception:
         return
                 
