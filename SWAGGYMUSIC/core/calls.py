@@ -5,7 +5,8 @@ from ntgcalls import (ConnectionNotFound, TelegramServerError,
                       RTMPStreamingUnsupported, ConnectionError)
 from pyrogram.errors import (ChatSendMediaForbidden, ChatSendPhotosForbidden,
                              MessageIdInvalid)
-from pyrogram.types import InputMediaPhoto, Message
+from pyrogram.enums import ButtonStyle
+from pyrogram.types import InputMediaPhoto, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, exceptions, types
 from pytgcalls.pytgcalls_session import PyTgCallsSession
 
@@ -59,6 +60,85 @@ class TgCall(PyTgCalls):
 
         try:
             await client.leave_call(chat_id, close=False)
+        except Exception:
+            pass
+
+    # ── Issue #3 Part A: async 5-minute cleanup for completed playback panels ──
+    async def _cleanup_playback_panel(
+        self, chat_id: int, message_id: int, delay: int = 300
+    ) -> None:
+        """Background task that deletes a completed song's playback panel
+        message after ``delay`` seconds (default 300 = 5 minutes).
+
+        Runs as a fire-and-forget ``asyncio.create_task`` so it never
+        blocks the next song / autoplay / queue processing.  Any failure
+        (message already deleted, no permission, etc.) is silently
+        swallowed — cleanup must never break playback.
+        """
+        try:
+            await asyncio.sleep(delay)
+            try:
+                await app.delete_messages(
+                    chat_id=chat_id,
+                    message_ids=message_id,
+                    revoke=True,
+                )
+            except Exception:
+                # Message may have already been deleted by the user, or
+                # the bot may no longer have delete permission.  Either
+                # way, this is not an error — just stop.
+                pass
+        except asyncio.CancelledError:
+            # Task was cancelled (e.g. bot shutting down) — exit quietly.
+            pass
+        except Exception:
+            pass
+
+    def _schedule_panel_cleanup(self, chat_id: int, message_id: int) -> None:
+        """Schedule a non-blocking 5-minute cleanup for a completed song's
+        playback panel.  Each call gets its own independent task, so
+        Song A's cleanup never interferes with Song B's panel."""
+        if not message_id:
+            return
+        asyncio.create_task(self._cleanup_playback_panel(chat_id, message_id))
+
+    # ── Issue #3 Part B: reference greeting card when queue empty + autoplay off ──
+    async def _send_queue_finished_greeting(self, chat_id: int) -> None:
+        """Send the Reference repo's 'Queue Has Finished' greeting card
+        when the queue is empty AND autoplay is OFF.
+
+        Adapted from KURIGRAMSWAG-main/SWAGGYMUSIC/core/call.py:change_stream
+        (the ``if not await is_autoplay_on(chat_id):`` branch).
+
+        Uses the bot's dynamic name (``app.name``) — never hardcoded.
+        Buttons:
+          - ✙ Aᴅᴅ Mᴇ Tᴏ Pʟᴀʏ ✙  (URL to add bot to a group, PRIMARY)
+          - ⋞ Cʟᴏsᴇ ⋟            (callback_data=close_message, DANGER)
+        """
+        try:
+            buttons_row = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            text="✙ Aᴅᴅ Mᴇ Tᴏ Pʟᴀʏ ✙",
+                            url=f"https://t.me/{app.username}?startgroup=true",
+                            style=ButtonStyle.PRIMARY,
+                        ),
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="⋞ Cʟᴏsᴇ ⋟",
+                            callback_data="close_message",
+                            style=ButtonStyle.DANGER,
+                        ),
+                    ]
+                ]
+            )
+            await app.send_message(
+                chat_id,
+                "🎵 <b>Tʜᴇ Qᴜᴇᴜᴇ Hᴀs Fɪɴɪsʜᴇᴅ. Usᴇ /play Tᴏ Aᴅᴅ Mᴏʀᴇ Sᴏɴɢs!!</b>",
+                reply_markup=buttons_row,
+            )
         except Exception:
             pass
 
@@ -281,6 +361,7 @@ class TgCall(PyTgCalls):
                         media=InputMediaPhoto(
                             media=_thumb,
                             caption=text,
+                            has_spoiler=True,
                         ),
                         reply_markup=keyboard,
                     )
@@ -307,6 +388,7 @@ class TgCall(PyTgCalls):
                         chat_id=chat_id,
                         photo=_thumb,
                         caption=text,
+                        has_spoiler=True,
                         reply_markup=keyboard,
                     )
                 else:
@@ -421,6 +503,12 @@ class TgCall(PyTgCalls):
             return await self.replay(chat_id)
 
         finished = queue.get_current(chat_id)
+
+        # Capture the finished song's playback-panel message ID BEFORE
+        # queue.get_next() pops it, so we can schedule a 5-minute cleanup
+        # for that specific message (Issue #3 Part A).
+        finished_panel_msg_id = getattr(finished, "message_id", 0) if finished else 0
+
         media = queue.get_next(chat_id)
 
         # If there is no queued item, generate the autoplay item before
@@ -439,7 +527,20 @@ class TgCall(PyTgCalls):
         except Exception:
             pass
 
+        # ── Issue #3 Part A: schedule 5-minute cleanup for the finished
+        #    song's playback panel.  This runs as a non-blocking background
+        #    task, so the next song / autoplay / queue processing continues
+        #    immediately.  Each finished panel gets its own independent
+        #    cleanup task. ──────────────────────────────────────────────
+        if finished_panel_msg_id:
+            self._schedule_panel_cleanup(chat_id, finished_panel_msg_id)
+
         if not media:
+            # ── Issue #3 Part B: when the queue is empty AND autoplay is
+            #    OFF, show the Reference repo's "Queue Has Finished"
+            #    greeting card instead of silently leaving the old panel.
+            if not await db.get_autoplay(chat_id):
+                await self._send_queue_finished_greeting(chat_id)
             return await self.stop(chat_id)
 
         _lang = await lang.get_lang(chat_id)

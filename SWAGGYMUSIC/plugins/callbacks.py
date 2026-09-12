@@ -344,4 +344,21 @@ async def _autoplay_change(_, query: types.CallbackQuery):
         )
     except Exception:
         return
+
+
+# ─── close_message callback (Reference greeting card Close button) ────
+# Handles callback_data == "close_message", used by the "Queue Has
+# Finished" greeting card's ⋞ Cʟᴏsᴇ ⋟ button (adapted from the reference
+# KURIGRAMSWAG repository).  Deletes the greeting card message.
+@app.on_callback_query(filters.regex(r"^close_message$") & ~app.bl_users)
+@lang.language()
+async def _close_message(_, query: types.CallbackQuery):
+    try:
+        await query.answer()
+    except Exception:
+        pass
+    try:
+        await query.message.delete()
+    except Exception:
+        return
                 
