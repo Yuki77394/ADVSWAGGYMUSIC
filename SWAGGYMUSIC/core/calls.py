@@ -1,4 +1,5 @@
 import asyncio
+import html
 import re
 
 from ntgcalls import (ConnectionNotFound, TelegramServerError,
@@ -343,14 +344,16 @@ class TgCall(PyTgCalls):
                 else:
                     _thumb = config.DEFAULT_THUMB
 
-            title = media.title or ""
-            title = title.split("#")[0].strip()
+            title = str(media.title or "").strip()
             if len(title) > 25:
                 title = title[:25].rstrip() + "..."
 
+            safe_title = html.escape(title, quote=False)
+            safe_url = html.escape(str(media.url or ""), quote=True)
+
             text = _lang["play_media"].format(
-                media.url,
-                title,
+                safe_url,
+                safe_title,
                 media.duration,
                 media.user,
             )
