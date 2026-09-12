@@ -21,14 +21,14 @@ def _autoplay_markup(autoplay_state: bool) -> InlineKeyboardMarkup:
         [
             [
                 InlineKeyboardButton(
-                    text="≡ Eɴᴀʙʟᴇ ≡" if not autoplay_state else "≡ Dɪsᴀʙʟᴇ ≡",
+                    text="⌯ Eɴᴀʙʟᴇ ⌯" if not autoplay_state else "⌯ Dɪsᴀʙʟᴇ ⌯",
                     callback_data="AUTOPLAYCHANGE",
                     style=ButtonStyle.PRIMARY,
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="≡ Cʟᴏsᴇ ≡",
+                    text="⌯ Cʟᴏsᴇ ⌯",
                     callback_data="close",
                     style=ButtonStyle.DANGER,
                 ),
