@@ -47,12 +47,7 @@ async def _autoplay(_, m: types.Message):
     if len(m.command) < 2:
         status = await db.get_autoplay(chat_id)
 
-        # Dynamic bot name — resolved at runtime from the live
-        # Pyrogram/Kurigram client.  NEVER hardcoded.
-        bot_name = getattr(app, "name", None) or "Music"
-
         text = (
-            f"<b>˹{bot_name} ♪</b>\n\n"
             f"<b>≫ Wʜᴇɴ Eɴᴀʙʟᴇᴅ, Tʜᴇ Bᴏᴛ Wɪʟʟ\n"
             f"Aᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ Pʟᴀʏ Rᴇʟᴀᴛᴇᴅ\n"
             f"Sᴏɴɢs Wʜᴇɴ Tʜᴇ Qᴜᴇᴜᴇ Is\n"

@@ -129,7 +129,7 @@
   "stats_fetching": "Stats များကို ရယူနေသည်...",
   "stats_sudo": "\n\n<b>Modules:</b> {0}\n<b>Platform:</b> {1}\n<b>RAM အသုံးပြုမှု:</b> <code>{2}MB | {3}GB</code>\n<b>CPU အသုံးပြုမှု:</b> <code>{4}% ({5} Cores)</code>\n<b>Storage:</b> <code>{6}GB | {7}GB</code>\n\n<b>Python:</b> <code>V{8}</code>\n<b>Pyrogram:</b> <code>V{9}</code>\n<b>PyTgCalls:</b> <code>V{10}</code>",
   "stats_user": "<u><b>{0} Stats</b></u>\n\n<b>Assistants:</b> {1}\n<b>Auto Leave:</b> {2}\n\n<b>Blocked Chats:</b> {3}\n<b>Blocked Users:</b> {4}\n<b>Sudo Users:</b> {5}\n\n<b>Served Chats:</b> {6}\n<b>Served Users:</b> {7}",
-  "thumb_1": "⊚ ᴛʜᴜϻʙɴʌɪʟ sєᴛᴛɪɴɢs :\n\n➻ /thumb : ϻʌɴʌɢє ᴠɪsᴜʌʟ sᴇᴛᴛɪɴɢs.\n\n๏ ᴏᴘᴛɪᴏɴs :\n\n• єɴʌʙʟє : ʌʀᴛᴡᴏʀᴋ + sᴛʀєʌϻ ɪɴғᴏ\n• ᴅɪsʌʙʟє : ᴛєxᴛ-ᴏɴʟʏ ᴜᴘᴅʌᴛєs\n• ᴄʟᴏsє : ᴄʟᴏsє sєᴛᴛɪɴɢs\n\n๏ ɴᴏᴛє : sєᴛᴛɪɴɢs sʌᴠєᴅ ᴘєʀ ᴄʜᴀᴛ.",
+  "thumb_1": "<b>⊚ ᴛʜᴜϻʙɴʌɪʟ sєᴛᴛɪɴɢs :\n\n➻ /thumb : ϻʌɴʌɢє ᴠɪsᴜʌʟ sᴇᴛᴛɪɴɢs.\n\n๏ ᴏᴘᴛɪᴏɴs :\n\n• єɴʌʙʟє : ʌʀᴛᴡᴏʀᴋ + sᴛʀєʌϻ ɪɴғᴏ\n• ᴅɪsʌʙʟє : ᴛєxᴛ-ᴏɴʟʏ ᴜᴘᴅʌᴛєs\n• ᴄʟᴏsє : ᴄʟᴏsє sєᴛᴛɪɴɢs\n\n๏ ɴᴏᴛє : sєᴛᴛɪɴɢs sʌᴠєᴅ ᴘєʀ ᴄʜᴀᴛ.</b>",
   "thumb_on": "● Thumbnail ဖွင့်ပြီးပါပြီ။",
   "thumb_off": "● Thumbnail ပိတ်ပြီးပါပြီ။",
   "sudo_already": "{0} သည် Sudo User ဖြစ်ပြီးသားဖြစ်ပါသည်။",
