@@ -1,6 +1,7 @@
 import asyncio
 import html
 import json
+import logging
 import random
 
 import aiohttp
@@ -18,6 +19,8 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 # message_effect_id, while Telegram's Bot API does — so the private welcome
 # photo is sent through the Bot API endpoint (see _send_start_photo_with_effect).
 CELEBRATION_EFFECT_ID = 5046509860389126442
+
+logger = logging.getLogger(__name__)
 
 
 def build_start_caption(user, template: str) -> str:
@@ -56,16 +59,10 @@ def build_start_caption(user, template: str) -> str:
     return template.format(user_mention, bot_mention)
 
 
-async def _send_start_photo_with_effect(
-    message: types.Message,
-    photo: str,
-    caption: str,
-    reply_markup: types.InlineKeyboardMarkup,
-) -> None:
-    """Send the private /start welcome photo through the Bot API so the
-    celebration message-effect ID can be attached. Falls back to a regular
-    Kurigram reply_photo / reply_text on failure so the start flow keeps
-    working even if the Bot API call fails.
+def _build_bot_api_keyboard(reply_markup: types.InlineKeyboardMarkup) -> list:
+    """Convert a Pyrogram/Kurigram InlineKeyboardMarkup into the Bot API
+    inline_keyboard JSON structure, preserving url, callback_data, user_id,
+    style, and icon_custom_emoji_id on each button.
     """
     keyboard = []
     for row in (reply_markup.inline_keyboard if reply_markup else []):
@@ -101,28 +98,125 @@ async def _send_start_photo_with_effect(
             row_buttons.append(item)
         if row_buttons:
             keyboard.append(row_buttons)
+    return keyboard
 
-    payload = {
-        "chat_id": message.chat.id,
-        "photo": photo,
+
+async def _download_photo(photo_url: str) -> bytes | None:
+    """Download the start image client-side so it can be uploaded as
+    multipart/form-data to the Bot API.  This avoids Telegram's server-side
+    URL fetching (which is the most common cause of sendPhoto failures when
+    using a URL string for the ``photo`` parameter).
+    """
+    timeout = aiohttp.ClientTimeout(total=20)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(photo_url) as resp:
+                if resp.status != 200:
+                    logger.warning(
+                        "Start photo download failed: HTTP %s for %s",
+                        resp.status,
+                        photo_url,
+                    )
+                    return None
+                data = await resp.read()
+                if not data:
+                    logger.warning("Start photo download returned empty body for %s", photo_url)
+                    return None
+                return data
+    except Exception as exc:
+        logger.warning("Start photo download error for %s: %s", photo_url, exc)
+        return None
+
+
+async def _send_start_photo_with_effect(
+    message: types.Message,
+    photo: str,
+    caption: str,
+    reply_markup: types.InlineKeyboardMarkup,
+) -> None:
+    """Send the private /start welcome photo through the Bot API so the
+    celebration message-effect ID can be attached.
+
+    The photo is downloaded client-side and uploaded as multipart/form-data
+    (not as a URL string).  This is critical: when ``photo`` is passed as a
+    URL string, Telegram's servers must fetch the image server-side, and
+    that fetch can fail intermittently.  When it fails, the old code silently
+    fell back to Kurigram's ``reply_photo`` which does NOT support
+    ``message_effect_id`` — so the user saw the photo but NOT the celebration
+    effect.
+
+    By downloading the image ourselves and uploading it as a file, the Bot
+    API request is reliable and the ``message_effect_id`` is always attached.
+
+    Falls back to Kurigram ``reply_photo`` / ``reply_text`` (without the
+    effect) only if the Bot API call itself fails, so the start flow keeps
+    working in all cases.
+    """
+    keyboard = _build_bot_api_keyboard(reply_markup)
+
+    # Build the form fields (everything except the photo file itself).
+    form_fields = {
+        "chat_id": str(message.chat.id),
         "caption": caption,
         "parse_mode": "HTML",
-        "has_spoiler": True,
+        "has_spoiler": "true",
         "message_effect_id": str(CELEBRATION_EFFECT_ID),
         "reply_markup": json.dumps({"inline_keyboard": keyboard}),
         "reply_parameters": json.dumps({"message_id": message.id}),
     }
 
     url = f"https://api.telegram.org/bot{config.BOT_TOKEN}/sendPhoto"
+
+    # ── Step 1: download the photo client-side ──────────────────────────
+    # This avoids Telegram's server-side URL fetching, which is the #1 cause
+    # of sendPhoto failures and was causing the message_effect_id to be
+    # silently dropped (the old code fell back to Kurigram which has no
+    # message_effect_id support).
+    photo_bytes = await _download_photo(photo)
+
     timeout = aiohttp.ClientTimeout(total=30)
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(url, data=payload) as response:
+            if photo_bytes:
+                # ── Step 2a: upload as multipart/form-data (preferred) ──
+                # The photo is sent as a file upload, so Telegram does NOT
+                # need to fetch any URL.  message_effect_id is included in
+                # the same form and is reliably applied to the message.
+                form = aiohttp.FormData()
+                for key, value in form_fields.items():
+                    form.add_field(key, value)
+                form.add_field(
+                    "photo",
+                    photo_bytes,
+                    filename="start.jpg",
+                    content_type="image/jpeg",
+                )
+                async with session.post(url, data=form) as response:
+                    result = await response.json(content_type=None)
+                    if response.status == 200 and result.get("ok"):
+                        return  # Success — effect is applied
+                    logger.warning(
+                        "Bot API sendPhoto (multipart) failed: %s", result
+                    )
+            else:
+                logger.info(
+                    "Photo download failed; trying URL-based sendPhoto as fallback"
+                )
+
+            # ── Step 2b: fallback — send photo as URL string ───────────
+            # If the client-side download failed, try the URL-string approach.
+            # This may still work if Telegram's servers can fetch the URL.
+            form_fields["photo"] = photo
+            async with session.post(url, data=form_fields) as response:
                 result = await response.json(content_type=None)
-                if response.status != 200 or not result.get("ok"):
-                    raise RuntimeError(f"Telegram Bot API sendPhoto failed: {result}")
-                return
-    except Exception:
+                if response.status == 200 and result.get("ok"):
+                    return  # Success — effect is applied
+                logger.warning(
+                    "Bot API sendPhoto (URL) failed: %s", result
+                )
+                raise RuntimeError(f"Bot API sendPhoto failed: {result}")
+    except Exception as exc:
+        logger.warning("Start photo Bot API send failed, falling back to Kurigram: %s", exc)
         # Fallback: send the photo through Kurigram (without the message
         # effect) so the welcome message still works.
         try:
